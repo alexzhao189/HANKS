@@ -1,0 +1,34 @@
+name: tiktok_tutorial
+description: A new Flutter project.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.15.1 <3.0.0"
+
+dependencies:
+  cached_network_image: ^3.2.0
+  cloud_firestore: ^3.1.6
+  cupertino_icons: ^1.0.2
+  firebase_auth: ^3.3.5
+  firebase_core: ^1.11.0
+  firebase_storage: ^10.2.5
+  flutter:
+    sdk: flutter
+  get: ^4.6.1
+  image_picker: ^0.8.4+4
+  timeago: ^3.1.0
+  video_compress: ^3.1.0
+  video_player: ^2.2.11
+
+dev_dependencies:
+  flutter_lints: ^1.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+# forge: firebase_core 1.24 still calls verifyExtends; PI 4.5.2+ renamed to verify
+dependency_overrides:
+  firebase_core_platform_interface: 4.4.1
