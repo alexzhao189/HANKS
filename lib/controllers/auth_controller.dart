@@ -12,7 +12,7 @@ import 'package:tiktok_tutorial/views/screens/home_screen.dart';
 class AuthController extends GetxController {
   static AuthController instance = Get.find();
   late Rx<User?> _user;
-  late Rx<File?> _pickedImage;
+  final Rx<File?> _pickedImage = Rx<File?>(null);
 
   File? get profilePhoto => _pickedImage.value;
   User get user => _user.value!;
@@ -37,6 +37,7 @@ class AuthController extends GetxController {
     final pickedImage =
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
+      _pickedImage.value = File(pickedImage.path);
       final l10n = tryL10n();
       Get.snackbar(
         l10n?.profilePictureTitle ?? 'Profile Picture',
@@ -44,7 +45,6 @@ class AuthController extends GetxController {
             'You have successfully selected your profile picture!',
       );
     }
-    _pickedImage = Rx<File?>(File(pickedImage!.path));
   }
 
   // upload to firebase storage
@@ -64,10 +64,17 @@ class AuthController extends GetxController {
   void registerUser(
       String username, String email, String password, File? image) async {
     try {
+      if (image == null) {
+        final l10n = tryL10n();
+        Get.snackbar(
+          l10n?.profilePictureTitle ?? 'Profile Picture',
+          'Please pick a profile photo before registering.',
+        );
+        return;
+      }
       if (username.isNotEmpty &&
           email.isNotEmpty &&
-          password.isNotEmpty &&
-          image != null) {
+          password.isNotEmpty) {
         // save out user to our ath and firebase firestore
         UserCredential cred = await firebaseAuth.createUserWithEmailAndPassword(
           email: email,
