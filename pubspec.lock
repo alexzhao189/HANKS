@@ -221,10 +221,10 @@ packages:
     dependency: "direct overridden"
     description:
       name: firebase_core_platform_interface
-      sha256: "3cd70171c6bdd314d726a46706c75554b75b20b97869dbace71832615ea8ef3c"
+      sha256: b51257a8b4388565cd66062d727d3e60067b5f5cc3390eb0ecd20b8f97741bdb
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "4.4.1"
+    version: "4.5.1"
   firebase_core_web:
     dependency: transitive
     description:

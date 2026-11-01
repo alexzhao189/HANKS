@@ -34,6 +34,6 @@ flutter:
   generate: true
   uses-material-design: true
 
-# forge: firebase_core 1.24 still calls verifyExtends; PI 4.5.2+ renamed to verify
+# forge: keep PI 4.5.1 — firebase_core 1.24 needs Pigeon (>=4.5.1) but still calls verifyExtends (removed in 4.5.2+)
 dependency_overrides:
-  firebase_core_platform_interface: 4.4.1
+  firebase_core_platform_interface: 4.5.1
