@@ -49,6 +49,10 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+        // Phone-installable fat APK (arm64 phones). Avoid emulator-only x86 APKs.
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
     }
 
     buildTypes {

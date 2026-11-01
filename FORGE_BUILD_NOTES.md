@@ -7,6 +7,14 @@
 - Firebase Auth/Firestore/Storage removed; google-services plugin stripped
 - i18n (en/zh/ja) kept
 
+## Android packaging (phone install)
+- minSdk 21 (unchanged from firebase-demo)
+- `ndk.abiFilters`: armeabi-v7a + arm64-v8a (required for physical arm64 phones e.g. moto X30 Pro / Android 15)
+- Build for captain phone: `fvm flutter build apk --debug --target-platform android-arm,android-arm64`
+- Output: `build\app\outputs\flutter-apk\app-debug.apk`
+- Do NOT deliver an emulator-only APK (x86 / x86_64 only) — installer shows 应用与您的手机不兼容
+- 2026-11-02: failed APK had native-code only x86+x86_64; fixed by arm rebuild + abiFilters
+
 ## Historical Firebase demo (tagged `firebase-demo`)
 - FVM Flutter 3.7.12 / Dart 2.19.6
 - Keep README original deps; override firebase_core_platform_interface: 4.5.1
