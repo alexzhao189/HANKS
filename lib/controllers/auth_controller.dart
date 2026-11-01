@@ -1,63 +1,65 @@
-import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:tiktok_tutorial/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tiktok_tutorial/l10n/l10n_helper.dart';
+import 'package:tiktok_tutorial/models/app_user.dart';
 import 'package:tiktok_tutorial/models/user.dart' as model;
+import 'package:tiktok_tutorial/services/local_db.dart';
+import 'package:tiktok_tutorial/services/local_media.dart';
 import 'package:tiktok_tutorial/views/screens/auth/login_screen.dart';
 import 'package:tiktok_tutorial/views/screens/home_screen.dart';
-import 'package:flutter/material.dart';
 
 class AuthController extends GetxController {
   static AuthController instance = Get.find();
-  late Rx<User?> _user;
+  final Rx<AppUser?> _user = Rx<AppUser?>(null);
   final Rx<File?> _pickedImage = Rx<File?>(null);
   final RxBool isLoading = false.obs;
 
-  /// When true, authStateChanges must not navigate away mid-signup
-  /// (createUser fires before Storage/Firestore finish).
-  bool _completingRegistration = false;
+  static const _sessionKey = 'local_session_uid';
 
   File? get profilePhoto => _pickedImage.value;
-  User get user => _user.value!;
+  AppUser get user => _user.value!;
+  bool get isLoggedIn => _user.value != null;
 
   @override
   void onReady() {
     super.onReady();
-    _user = Rx<User?>(firebaseAuth.currentUser);
-    _user.bindStream(firebaseAuth.authStateChanges());
-    ever(_user, _setInitialScreen);
-
-    // Storage uploads from CN / flaky VPN benefit from longer retries.
-    try {
-      firebaseStorage.setMaxUploadRetryTime(const Duration(seconds: 120));
-      firebaseStorage.setMaxOperationRetryTime(const Duration(seconds: 120));
-      debugPrint(
-        'FirebaseStorage ready: bucket=${firebaseStorage.bucket} '
-        'app=${firebaseStorage.app.name}',
-      );
-    } catch (e, st) {
-      debugPrint('FirebaseStorage retry config failed: $e\n$st');
-    }
+    _restoreSession();
   }
 
-  _setInitialScreen(User? user) {
-    if (_completingRegistration) return;
-    if (user == null) {
+  Future<void> _restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString(_sessionKey);
+    if (uid == null || uid.isEmpty) {
+      _user.value = null;
       Get.offAll(() => LoginScreen());
-    } else {
-      Get.offAll(() => const HomeScreen());
+      return;
     }
+    final row = await LocalDb.instance.getUserByUid(uid);
+    if (row == null) {
+      await prefs.remove(_sessionKey);
+      _user.value = null;
+      Get.offAll(() => LoginScreen());
+      return;
+    }
+    _user.value = AppUser(uid: row.uid, email: row.email);
+    Get.offAll(() => const HomeScreen());
+  }
+
+  Future<void> _persistSession(String uid) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sessionKey, uid);
+  }
+
+  Future<void> _clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_sessionKey);
   }
 
   void pickImage() async {
     try {
-      // Downscale/compress at pick time — large gallery HEIC/JPEG often
-      // triggers firebase_storage [unknown] on putFile over weak links.
       final pickedImage = await ImagePicker().pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
@@ -74,11 +76,6 @@ class AuthController extends GetxController {
           return;
         }
         _pickedImage.value = file;
-        final bytes = await file.length();
-        debugPrint(
-          'pickImage ok: path=${file.path} sizeBytes=$bytes '
-          'mime=${pickedImage.mimeType}',
-        );
         final l10n = tryL10n();
         Get.snackbar(
           l10n?.profilePictureTitle ?? 'Profile Picture',
@@ -89,87 +86,6 @@ class AuthController extends GetxController {
     } catch (e, st) {
       debugPrint('pickImage failed: $e\n$st');
       Get.snackbar('Profile Picture', 'Failed to pick image: $e');
-    }
-  }
-
-  // upload to firebase storage
-  Future<String> _uploadToStorage(File image) async {
-    final uid = firebaseAuth.currentUser?.uid;
-    if (uid == null) {
-      throw StateError('Not signed in; cannot upload profile photo.');
-    }
-
-    final path = 'profilePics/$uid';
-    final bucket = firebaseStorage.bucket;
-    final fileSize = await image.length();
-    debugPrint(
-      '_uploadToStorage start: bucket=$bucket path=$path '
-      'file=${image.path} sizeBytes=$fileSize '
-      'authUid=$uid',
-    );
-
-    if (fileSize <= 0) {
-      throw StateError('Profile photo is empty (0 bytes). Pick again.');
-    }
-    // Soft cap — if somehow still huge, fail with a clear message.
-    if (fileSize > 8 * 1024 * 1024) {
-      throw StateError(
-        'Profile photo is ${fileSize ~/ (1024 * 1024)}MB; '
-        'please pick a smaller image (under 8MB).',
-      );
-    }
-
-    final Reference ref = firebaseStorage.ref().child('profilePics').child(uid);
-
-    // Prefer putData + explicit contentType: more reliable than putFile on
-    // Android (path/URI quirks) and satisfies rules that match image/*.
-    final Uint8List bytes = await image.readAsBytes();
-    final metadata = SettableMetadata(
-      contentType: 'image/jpeg',
-      customMetadata: <String, String>{
-        'uid': uid,
-        'source': 'signup_profile',
-      },
-    );
-
-    UploadTask uploadTask = ref.putData(bytes, metadata);
-    try {
-      TaskSnapshot snap = await uploadTask.timeout(
-        const Duration(seconds: 120),
-        onTimeout: () {
-          uploadTask.cancel();
-          throw TimeoutException(
-            'Storage upload timed out after 120s '
-            '(bucket=$bucket path=$path size=$fileSize). '
-            'Check VPN/network, Storage rules, and App Check.',
-          );
-        },
-      );
-      debugPrint(
-        '_uploadToStorage putData done: state=${snap.state} '
-        'bytesTransferred=${snap.bytesTransferred}',
-      );
-      String downloadUrl = await snap.ref.getDownloadURL().timeout(
-        const Duration(seconds: 45),
-        onTimeout: () => throw TimeoutException(
-          'getDownloadURL timed out (bucket=$bucket path=$path).',
-        ),
-      );
-      debugPrint('_uploadToStorage ok: urlLen=${downloadUrl.length}');
-      return downloadUrl;
-    } on FirebaseException catch (e, st) {
-      debugPrint(
-        '_uploadToStorage FirebaseException: plugin=${e.plugin} '
-        'code=${e.code} message=${e.message} '
-        'bucket=$bucket path=$path sizeBytes=$fileSize\n$st',
-      );
-      rethrow;
-    } catch (e, st) {
-      debugPrint(
-        '_uploadToStorage failed: $e bucket=$bucket path=$path '
-        'sizeBytes=$fileSize\n$st',
-      );
-      rethrow;
     }
   }
 
@@ -187,122 +103,63 @@ class AuthController extends GetxController {
     );
   }
 
-  String _friendlyError(Object e) {
-    if (e is FirebaseAuthException) {
-      return 'Auth [${e.code}]: ${e.message ?? e.code}';
-    }
-    if (e is FirebaseException) {
-      final base = '${e.plugin} [${e.code}]: ${e.message ?? e.code}';
-      if (e.plugin.contains('storage')) {
-        final bucket = firebaseStorage.bucket;
-        return '$base | bucket=$bucket. '
-            'If this persists: Console → Storage rules must allow '
-            'write when request.auth != null for profilePics/{uid}; '
-            'disable App Check enforcement; confirm VPN reaches '
-            'firebasestorage.googleapis.com.';
-      }
-      return base;
-    }
-    if (e is TimeoutException) {
-      return e.message ?? 'Operation timed out';
-    }
-    return e.toString();
-  }
-
-  // registering the user
+  /// Signup kept for UI: only demo email/password accepted; saves local profile.
   Future<void> registerUser(
       String username, String email, String password, File? image) async {
     if (isLoading.value) return;
     final l10n = tryL10n();
-    try {
-      if (image == null) {
-        Get.snackbar(
-          l10n?.profilePictureTitle ?? 'Profile Picture',
-          'Please pick a profile photo before registering.',
-        );
-        return;
-      }
-      if (!await image.exists()) {
-        Get.snackbar(
-          l10n?.profilePictureTitle ?? 'Profile Picture',
-          'Selected photo is missing on disk. Please pick again.',
-        );
-        return;
-      }
-      if (username.isEmpty || email.isEmpty || password.isEmpty) {
-        Get.snackbar(
-          l10n?.errorCreatingAccount ?? 'Error Creating Account',
-          l10n?.pleaseEnterAllFields ?? 'Please enter all the fields',
-        );
-        return;
-      }
+    final em = email.trim().toLowerCase();
+    if (em != LocalDb.demoEmail || password != LocalDb.demoPassword) {
+      Get.snackbar(
+        l10n?.errorCreatingAccount ?? 'Error Creating Account',
+        'Demo only: use ${LocalDb.demoEmail} / ${LocalDb.demoPassword}',
+        duration: const Duration(seconds: 6),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    if (username.isEmpty) {
+      Get.snackbar(
+        l10n?.errorCreatingAccount ?? 'Error Creating Account',
+        l10n?.pleaseEnterAllFields ?? 'Please enter all the fields',
+      );
+      return;
+    }
 
+    try {
       isLoading.value = true;
-      _completingRegistration = true;
       _showLoadingDialog();
 
-      // 1) Auth
-      UserCredential cred = await firebaseAuth
-          .createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          )
-          .timeout(
-            const Duration(seconds: 120),
-            onTimeout: () => throw TimeoutException(
-              'Firebase Auth createUser timed out after 120s. '
-              'Cold Auth from CN can be slow; if this repeats, check Wi-Fi/VPN, '
-              'emulator reachability to identitytoolkit.googleapis.com, '
-              'and that Email/Password is enabled on the Firebase project.',
-            ),
-          );
-      debugPrint(
-        'registerUser Auth ok: uid=${cred.user?.uid} '
-        'email=${cred.user?.email}',
-      );
+      String photoPath = '';
+      if (image != null && await image.exists()) {
+        photoPath =
+            await LocalMedia.instance.saveProfilePhoto(LocalDb.demoUid, image);
+      }
 
-      // 2) Storage (common hang / rules failure point)
-      String downloadUrl = await _uploadToStorage(image);
-
-      // 3) Firestore user doc
-      model.User user = model.User(
+      final existing = await LocalDb.instance.getUserByUid(LocalDb.demoUid);
+      final user = model.User(
         name: username.trim(),
-        email: email.trim(),
-        uid: cred.user!.uid,
-        profilePhoto: downloadUrl,
+        email: LocalDb.demoEmail,
+        uid: LocalDb.demoUid,
+        profilePhoto: photoPath.isNotEmpty
+            ? photoPath
+            : (existing?.profilePhoto ?? ''),
       );
-      await firestore
-          .collection('users')
-          .doc(cred.user!.uid)
-          .set(user.toJson())
-          .timeout(
-            const Duration(seconds: 45),
-            onTimeout: () => throw TimeoutException(
-              'Firestore set timed out. Check Firestore rules / network.',
-            ),
-          );
-      debugPrint('registerUser Firestore ok: uid=${cred.user!.uid}');
+      await LocalDb.instance.upsertUser(user);
+      _user.value = AppUser(uid: user.uid, email: user.email);
+      await _persistSession(user.uid);
 
-      _completingRegistration = false;
       _closeLoadingDialog();
       isLoading.value = false;
       Get.offAll(() => const HomeScreen());
     } catch (e, st) {
       debugPrint('registerUser failed: $e\n$st');
-      _completingRegistration = false;
       _closeLoadingDialog();
       isLoading.value = false;
-      // Auth user may already exist while Storage/Firestore failed — sign out
-      // so the user can retry cleanly instead of sitting on a half-created session.
-      try {
-        if (firebaseAuth.currentUser != null) {
-          await firebaseAuth.signOut();
-        }
-      } catch (_) {}
       Get.snackbar(
         l10n?.errorCreatingAccount ?? 'Error Creating Account',
-        _friendlyError(e),
-        duration: const Duration(seconds: 12),
+        e.toString(),
+        duration: const Duration(seconds: 8),
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -319,30 +176,44 @@ class AuthController extends GetxController {
         );
         return;
       }
+      final em = email.trim().toLowerCase();
+      if (em != LocalDb.demoEmail || password != LocalDb.demoPassword) {
+        Get.snackbar(
+          l10n?.errorLoggingIn ?? 'Error Logging in',
+          'Invalid credentials. Use ${LocalDb.demoEmail} / ${LocalDb.demoPassword}',
+          duration: const Duration(seconds: 6),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
       isLoading.value = true;
       _showLoadingDialog();
-      await firebaseAuth
-          .signInWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          )
-          .timeout(
-            const Duration(seconds: 120),
-            onTimeout: () => throw TimeoutException(
-              'Firebase Auth signIn timed out after 120s. '
-              'Retry on a stable network/VPN; first Auth call from CN may be slow.',
-            ),
-          );
+
+      var row = await LocalDb.instance.getUserByUid(LocalDb.demoUid);
+      if (row == null) {
+        row = model.User(
+          name: LocalDb.demoName,
+          email: LocalDb.demoEmail,
+          uid: LocalDb.demoUid,
+          profilePhoto: '',
+        );
+        await LocalDb.instance.upsertUser(row);
+      }
+
+      _user.value = AppUser(uid: row.uid, email: row.email);
+      await _persistSession(row.uid);
+
       _closeLoadingDialog();
       isLoading.value = false;
-      // Navigation via authStateChanges / _setInitialScreen
+      Get.offAll(() => const HomeScreen());
     } catch (e, st) {
       debugPrint('loginUser failed: $e\n$st');
       _closeLoadingDialog();
       isLoading.value = false;
       Get.snackbar(
         l10n?.errorLoggingIn ?? 'Error Logging in',
-        _friendlyError(e),
+        e.toString(),
         duration: const Duration(seconds: 8),
         snackPosition: SnackPosition.BOTTOM,
       );
@@ -350,6 +221,8 @@ class AuthController extends GetxController {
   }
 
   void signOut() async {
-    await firebaseAuth.signOut();
+    await _clearSession();
+    _user.value = null;
+    Get.offAll(() => LoginScreen());
   }
 }

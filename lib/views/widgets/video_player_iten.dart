@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -15,20 +16,29 @@ class VideoPlayerItem extends StatefulWidget {
 class _VideoPlayerItemState extends State<VideoPlayerItem> {
   late VideoPlayerController videoPlayerController;
 
+  bool _isNetwork(String url) =>
+      url.startsWith('http://') || url.startsWith('https://');
+
   @override
   void initState() {
     super.initState();
-    videoPlayerController = VideoPlayerController.network(widget.videoUrl)
-      ..initialize().then((value) {
-        videoPlayerController.play();
-        videoPlayerController.setVolume(1);
-      });
+    if (_isNetwork(widget.videoUrl)) {
+      videoPlayerController = VideoPlayerController.network(widget.videoUrl);
+    } else {
+      videoPlayerController =
+          VideoPlayerController.file(File(widget.videoUrl));
+    }
+    videoPlayerController.initialize().then((value) {
+      videoPlayerController.play();
+      videoPlayerController.setVolume(1);
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    super.dispose();
     videoPlayerController.dispose();
+    super.dispose();
   }
 
   @override
@@ -41,7 +51,9 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
       decoration: const BoxDecoration(
         color: Colors.black,
       ),
-      child: VideoPlayer(videoPlayerController),
+      child: videoPlayerController.value.isInitialized
+          ? VideoPlayer(videoPlayerController)
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }

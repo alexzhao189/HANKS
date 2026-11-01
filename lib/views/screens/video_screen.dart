@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tiktok_tutorial/constants.dart';
+import 'package:tiktok_tutorial/services/media_paths.dart';
 import 'package:tiktok_tutorial/controllers/video_controller.dart';
 import 'package:tiktok_tutorial/views/screens/comment_screen.dart';
 import 'package:tiktok_tutorial/views/widgets/circle_animation.dart';
@@ -30,7 +31,7 @@ class VideoScreen extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(25),
               child: Image(
-                image: NetworkImage(profilePhoto),
+                image: mediaImageProvider(profilePhoto),
                 fit: BoxFit.cover,
               ),
             ),
@@ -61,7 +62,7 @@ class VideoScreen extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(25),
                 child: Image(
-                  image: NetworkImage(profilePhoto),
+                  image: mediaImageProvider(profilePhoto),
                   fit: BoxFit.cover,
                 ),
               ))
@@ -242,3 +243,4 @@ class VideoScreen extends StatelessWidget {
     );
   }
 }
+

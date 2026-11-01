@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 class Video {
   String username;
@@ -28,34 +28,44 @@ class Video {
   });
 
   Map<String, dynamic> toJson() => {
-        "username": username,
-        "uid": uid,
-        "profilePhoto": profilePhoto,
-        "id": id,
-        "likes": likes,
-        "commentCount": commentCount,
-        "shareCount": shareCount,
-        "songName": songName,
-        "caption": caption,
-        "videoUrl": videoUrl,
-        "thumbnail": thumbnail,
+        'username': username,
+        'uid': uid,
+        'profilePhoto': profilePhoto,
+        'id': id,
+        'likes': likes,
+        'commentCount': commentCount,
+        'shareCount': shareCount,
+        'songName': songName,
+        'caption': caption,
+        'videoUrl': videoUrl,
+        'thumbnail': thumbnail,
       };
 
-  static Video fromSnap(DocumentSnapshot snap) {
-    var snapshot = snap.data() as Map<String, dynamic>;
+  static List _decodeLikes(dynamic raw) {
+    if (raw == null) return [];
+    if (raw is List) return List.from(raw);
+    if (raw is String) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) return List.from(decoded);
+      } catch (_) {}
+    }
+    return [];
+  }
 
+  static Video fromMap(Map<String, dynamic> snapshot) {
     return Video(
-      username: snapshot['username'],
-      uid: snapshot['uid'],
-      id: snapshot['id'],
-      likes: snapshot['likes'],
-      commentCount: snapshot['commentCount'],
-      shareCount: snapshot['shareCount'],
-      songName: snapshot['songName'],
-      caption: snapshot['caption'],
-      videoUrl: snapshot['videoUrl'],
-      profilePhoto: snapshot['profilePhoto'],
-      thumbnail: snapshot['thumbnail'],
+      username: snapshot['username'] as String? ?? '',
+      uid: snapshot['uid'] as String? ?? '',
+      id: snapshot['id'] as String? ?? '',
+      likes: _decodeLikes(snapshot['likes']),
+      commentCount: (snapshot['commentCount'] as num?)?.toInt() ?? 0,
+      shareCount: (snapshot['shareCount'] as num?)?.toInt() ?? 0,
+      songName: snapshot['songName'] as String? ?? '',
+      caption: snapshot['caption'] as String? ?? '',
+      videoUrl: snapshot['videoUrl'] as String? ?? '',
+      profilePhoto: snapshot['profilePhoto'] as String? ?? '',
+      thumbnail: snapshot['thumbnail'] as String? ?? '',
     );
   }
 }

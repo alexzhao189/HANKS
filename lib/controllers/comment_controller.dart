@@ -1,110 +1,63 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/models/comment.dart';
+import 'package:tiktok_tutorial/services/local_db.dart';
+import 'package:tiktok_tutorial/controllers/video_controller.dart';
 
 class CommentController extends GetxController {
   final Rx<List<Comment>> _comments = Rx<List<Comment>>([]);
   List<Comment> get comments => _comments.value;
 
-  String _postId = "";
+  String _postId = '';
 
-  updatePostId(String id) {
+  void updatePostId(String id) {
     _postId = id;
     getComment();
   }
 
-  getComment() async {
-    _comments.bindStream(
-      firestore
-          .collection('videos')
-          .doc(_postId)
-          .collection('comments')
-          .snapshots()
-          .map(
-        (QuerySnapshot query) {
-          List<Comment> retValue = [];
-          for (var element in query.docs) {
-            retValue.add(Comment.fromSnap(element));
-          }
-          return retValue;
-        },
-      ),
-    );
+  Future<void> getComment() async {
+    _comments.value = await LocalDb.instance.getComments(_postId);
   }
 
-  postComment(String commentText) async {
+  Future<void> postComment(String commentText) async {
     try {
-      if (commentText.isNotEmpty) {
-        DocumentSnapshot userDoc = await firestore
-            .collection('users')
-            .doc(authController.user.uid)
-            .get();
-        var allDocs = await firestore
-            .collection('videos')
-            .doc(_postId)
-            .collection('comments')
-            .get();
-        int len = allDocs.docs.length;
+      if (commentText.isEmpty) return;
+      final userDoc =
+          await LocalDb.instance.getUserByUid(authController.user.uid);
+      if (userDoc == null) return;
 
-        Comment comment = Comment(
-          username: (userDoc.data()! as dynamic)['name'],
-          comment: commentText.trim(),
-          datePublished: DateTime.now(),
-          likes: [],
-          profilePhoto: (userDoc.data()! as dynamic)['profilePhoto'],
-          uid: authController.user.uid,
-          id: 'Comment $len',
-        );
-        await firestore
-            .collection('videos')
-            .doc(_postId)
-            .collection('comments')
-            .doc('Comment $len')
-            .set(
-              comment.toJson(),
-            );
-        DocumentSnapshot doc =
-            await firestore.collection('videos').doc(_postId).get();
-        await firestore.collection('videos').doc(_postId).update({
-          'commentCount': (doc.data()! as dynamic)['commentCount'] + 1,
-        });
+      final len = await LocalDb.instance.commentCountForVideo(_postId);
+      final comment = Comment(
+        username: userDoc.name,
+        comment: commentText.trim(),
+        datePublished: DateTime.now(),
+        likes: [],
+        profilePhoto: userDoc.profilePhoto,
+        uid: authController.user.uid,
+        id: 'Comment $len',
+      );
+      await LocalDb.instance.insertComment(_postId, comment);
+      await LocalDb.instance.bumpCommentCount(_postId);
+      await getComment();
+      if (Get.isRegistered<VideoController>()) {
+        await Get.find<VideoController>().refreshVideos();
       }
     } catch (e) {
-      Get.snackbar(
-        'Error While Commenting',
-        e.toString(),
-      );
+      Get.snackbar('Error While Commenting', e.toString());
     }
   }
 
-  likeComment(String id) async {
-    var uid = authController.user.uid;
-    DocumentSnapshot doc = await firestore
-        .collection('videos')
-        .doc(_postId)
-        .collection('comments')
-        .doc(id)
-        .get();
-
-    if ((doc.data()! as dynamic)['likes'].contains(uid)) {
-      await firestore
-          .collection('videos')
-          .doc(_postId)
-          .collection('comments')
-          .doc(id)
-          .update({
-        'likes': FieldValue.arrayRemove([uid]),
-      });
+  Future<void> likeComment(String id) async {
+    final uid = authController.user.uid;
+    final doc = await LocalDb.instance.getComment(_postId, id);
+    if (doc == null) return;
+    final likes = List.from(doc.likes);
+    if (likes.contains(uid)) {
+      likes.remove(uid);
     } else {
-      await firestore
-          .collection('videos')
-          .doc(_postId)
-          .collection('comments')
-          .doc(id)
-          .update({
-        'likes': FieldValue.arrayUnion([uid]),
-      });
+      likes.add(uid);
     }
+    await LocalDb.instance.updateCommentLikes(_postId, id, likes);
+    await getComment();
   }
 }

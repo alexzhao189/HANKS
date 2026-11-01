@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 import 'package:tiktok_tutorial/constants.dart';
+import 'package:tiktok_tutorial/services/media_paths.dart';
 import 'package:tiktok_tutorial/controllers/comment_controller.dart';
 import 'package:timeago/timeago.dart' as tago;
 
@@ -37,7 +38,7 @@ class CommentScreen extends StatelessWidget {
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.black,
-                            backgroundImage: NetworkImage(comment.profilePhoto),
+                            backgroundImage: mediaImageProvider(comment.profilePhoto),
                           ),
                           title: Row(
                             children: [
@@ -63,7 +64,7 @@ class CommentScreen extends StatelessWidget {
                             children: [
                               Text(
                                 tago.format(
-                                  comment.datePublished.toDate(),
+                                  comment.datePublished,
                                 ),
                                 style: const TextStyle(
                                   fontSize: 12,

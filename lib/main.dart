@@ -1,4 +1,3 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -6,13 +5,13 @@ import 'package:get/get.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/controllers/auth_controller.dart';
 import 'package:tiktok_tutorial/controllers/locale_controller.dart';
+import 'package:tiktok_tutorial/services/local_db.dart';
 import 'package:tiktok_tutorial/views/screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp().then((value) {
-    Get.put(AuthController());
-  });
+  await LocalDb.instance.database;
+  Get.put(AuthController());
   final localeController = Get.put(LocaleController());
   await localeController.loadSavedLocale();
   runApp(const MyApp());
