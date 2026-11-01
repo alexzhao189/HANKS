@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:get/get.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/views/screens/auth/login_screen.dart';
 import 'package:tiktok_tutorial/views/widgets/language_switcher.dart';
@@ -11,6 +13,9 @@ class SignupScreen extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+
+  static const _defaultAvatarUrl =
+      'https://www.pngitem.com/pimgs/m/150-1503945_transparent-user-png-default-user-image-png-png.png';
 
   @override
   Widget build(BuildContext context) {
@@ -50,12 +55,17 @@ class SignupScreen extends StatelessWidget {
                     ),
                     Stack(
                       children: [
-                        const CircleAvatar(
-                          radius: 64,
-                          backgroundImage: NetworkImage(
-                              'https://www.pngitem.com/pimgs/m/150-1503945_transparent-user-png-default-user-image-png-png.png'),
-                          backgroundColor: Colors.black,
-                        ),
+                        Obx(() {
+                          final File? photo = authController.profilePhoto;
+                          return CircleAvatar(
+                            radius: 64,
+                            backgroundImage: photo != null
+                                ? FileImage(photo)
+                                : const NetworkImage(_defaultAvatarUrl)
+                                    as ImageProvider,
+                            backgroundColor: Colors.black,
+                          );
+                        }),
                         Positioned(
                           bottom: -10,
                           left: 80,
@@ -108,33 +118,47 @@ class SignupScreen extends StatelessWidget {
                     const SizedBox(
                       height: 30,
                     ),
-                    Container(
-                      width: MediaQuery.of(context).size.width - 40,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: buttonColor,
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(5),
-                        ),
-                      ),
-                      child: InkWell(
-                        onTap: () => authController.registerUser(
-                          _usernameController.text,
-                          _emailController.text,
-                          _passwordController.text,
-                          authController.profilePhoto,
-                        ),
-                        child: Center(
-                          child: Text(
-                            l10n.register,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
+                    Obx(() {
+                      final busy = authController.isLoading.value;
+                      return Container(
+                        width: MediaQuery.of(context).size.width - 40,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: buttonColor,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(5),
                           ),
                         ),
-                      ),
-                    ),
+                        child: InkWell(
+                          onTap: busy
+                              ? null
+                              : () => authController.registerUser(
+                                    _usernameController.text,
+                                    _emailController.text,
+                                    _passwordController.text,
+                                    authController.profilePhoto,
+                                  ),
+                          child: Center(
+                            child: busy
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    l10n.register,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      );
+                    }),
                     const SizedBox(
                       height: 15,
                     ),
