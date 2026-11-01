@@ -159,9 +159,12 @@ class AuthController extends GetxController {
             password: password,
           )
           .timeout(
-            const Duration(seconds: 60),
+            const Duration(seconds: 120),
             onTimeout: () => throw TimeoutException(
-              'Firebase Auth createUser timed out. Check network / Auth config.',
+              'Firebase Auth createUser timed out after 120s. '
+              'Cold Auth from CN can be slow; if this repeats, check Wi-Fi/VPN, '
+              'emulator reachability to identitytoolkit.googleapis.com, '
+              'and that Email/Password is enabled on the Firebase project.',
             ),
           );
 
@@ -205,7 +208,7 @@ class AuthController extends GetxController {
       Get.snackbar(
         l10n?.errorCreatingAccount ?? 'Error Creating Account',
         _friendlyError(e),
-        duration: const Duration(seconds: 6),
+        duration: const Duration(seconds: 8),
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -230,9 +233,10 @@ class AuthController extends GetxController {
             password: password,
           )
           .timeout(
-            const Duration(seconds: 60),
+            const Duration(seconds: 120),
             onTimeout: () => throw TimeoutException(
-              'Firebase Auth signIn timed out. Check network.',
+              'Firebase Auth signIn timed out after 120s. '
+              'Retry on a stable network/VPN; first Auth call from CN may be slow.',
             ),
           );
       _closeLoadingDialog();
@@ -245,7 +249,7 @@ class AuthController extends GetxController {
       Get.snackbar(
         l10n?.errorLoggingIn ?? 'Error Logging in',
         _friendlyError(e),
-        duration: const Duration(seconds: 6),
+        duration: const Duration(seconds: 8),
         snackPosition: SnackPosition.BOTTOM,
       );
     }
