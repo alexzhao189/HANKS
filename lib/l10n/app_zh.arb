@@ -47,5 +47,7 @@
   "language": "语言",
   "languageEnglish": "English",
   "languageChinese": "简体中文",
-  "languageJapanese": "日本語"
+  "languageJapanese": "日本語",
+  "emailAlreadyRegistered": "该邮箱已注册",
+  "invalidCredentials": "邮箱或密码错误"
 }

@@ -10,10 +10,11 @@ class LocalDb {
   LocalDb._();
   static final LocalDb instance = LocalDb._();
 
-  static const demoEmail = 'hanks@gmail.com';
-  static const demoPassword = '123';
-  static const demoUid = 'local-hanks';
-  static const demoName = 'Hanks';
+  /// Legacy seed email from v1 installs (password filled on migration).
+  static const legacyDemoEmail = 'hanks@gmail.com';
+  static const legacyDemoPassword = '123';
+  static const legacyDemoUid = 'local-hanks';
+  static const legacyDemoName = 'Hanks';
 
   Database? _db;
 
@@ -28,14 +29,15 @@ class LocalDb {
     final path = p.join(dbPath, 'hanks_local.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
 CREATE TABLE users (
   uid TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
-  profilePhoto TEXT NOT NULL DEFAULT ''
+  profilePhoto TEXT NOT NULL DEFAULT '',
+  password TEXT NOT NULL DEFAULT ''
 )''');
         await db.execute('''
 CREATE TABLE videos (
@@ -68,12 +70,21 @@ CREATE TABLE followers (
   followerUid TEXT NOT NULL,
   PRIMARY KEY (userUid, followerUid)
 )''');
-        await db.insert('users', {
-          'uid': demoUid,
-          'name': demoName,
-          'email': demoEmail,
-          'profilePhoto': '',
-        });
+        // Fresh installs: no seeded account — register via UI.
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            "ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''",
+          );
+          // Preserve prior fake-login demo row so reinstall is not required.
+          await db.update(
+            'users',
+            {'password': legacyDemoPassword},
+            where: 'email = ? OR uid = ?',
+            whereArgs: [legacyDemoEmail, legacyDemoUid],
+          );
+        }
       },
     );
   }
@@ -87,10 +98,27 @@ CREATE TABLE followers (
 
   Future<User?> getUserByEmail(String email) async {
     final db = await database;
-    final rows =
-        await db.query('users', where: 'email = ?', whereArgs: [email.trim()]);
+    final rows = await db.query(
+      'users',
+      where: 'LOWER(email) = ?',
+      whereArgs: [email.trim().toLowerCase()],
+    );
     if (rows.isEmpty) return null;
     return User.fromMap(rows.first);
+  }
+
+  /// Insert a new user. Throws [DuplicateEmailException] if email exists.
+  Future<void> insertUser(User user) async {
+    final db = await database;
+    final existing = await getUserByEmail(user.email);
+    if (existing != null) {
+      throw DuplicateEmailException(user.email);
+    }
+    await db.insert(
+      'users',
+      user.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
   }
 
   Future<void> upsertUser(User user) async {
@@ -99,6 +127,16 @@ CREATE TABLE followers (
       'users',
       user.toJson(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateUserProfilePhoto(String uid, String path) async {
+    final db = await database;
+    await db.update(
+      'users',
+      {'profilePhoto': path},
+      where: 'uid = ?',
+      whereArgs: [uid],
     );
   }
 
@@ -271,4 +309,12 @@ CREATE TABLE followers (
       whereArgs: [userUid, followerUid],
     );
   }
+}
+
+class DuplicateEmailException implements Exception {
+  final String email;
+  DuplicateEmailException(this.email);
+
+  @override
+  String toString() => 'Email already registered: $email';
 }

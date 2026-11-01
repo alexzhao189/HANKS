@@ -58,6 +58,8 @@ class AuthController extends GetxController {
     await prefs.remove(_sessionKey);
   }
 
+  String _newUid() => 'local-${DateTime.now().microsecondsSinceEpoch}';
+
   void pickImage() async {
     try {
       final pickedImage = await ImagePicker().pickImage(
@@ -103,22 +105,16 @@ class AuthController extends GetxController {
     );
   }
 
-  /// Signup kept for UI: only demo email/password accepted; saves local profile.
+  /// Register a new local account in SQLite; optional avatar saved under hanks_media/.
   Future<void> registerUser(
       String username, String email, String password, File? image) async {
     if (isLoading.value) return;
     final l10n = tryL10n();
+    final name = username.trim();
     final em = email.trim().toLowerCase();
-    if (em != LocalDb.demoEmail || password != LocalDb.demoPassword) {
-      Get.snackbar(
-        l10n?.errorCreatingAccount ?? 'Error Creating Account',
-        'Demo only: use ${LocalDb.demoEmail} / ${LocalDb.demoPassword}',
-        duration: const Duration(seconds: 6),
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-    if (username.isEmpty) {
+    final pw = password;
+
+    if (name.isEmpty || em.isEmpty || pw.isEmpty) {
       Get.snackbar(
         l10n?.errorCreatingAccount ?? 'Error Creating Account',
         l10n?.pleaseEnterAllFields ?? 'Please enter all the fields',
@@ -130,28 +126,50 @@ class AuthController extends GetxController {
       isLoading.value = true;
       _showLoadingDialog();
 
-      String photoPath = '';
-      if (image != null && await image.exists()) {
-        photoPath =
-            await LocalMedia.instance.saveProfilePhoto(LocalDb.demoUid, image);
+      final existing = await LocalDb.instance.getUserByEmail(em);
+      if (existing != null) {
+        _closeLoadingDialog();
+        isLoading.value = false;
+        Get.snackbar(
+          l10n?.errorCreatingAccount ?? 'Error Creating Account',
+          l10n?.emailAlreadyRegistered ?? 'This email is already registered',
+          duration: const Duration(seconds: 6),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
       }
 
-      final existing = await LocalDb.instance.getUserByUid(LocalDb.demoUid);
+      final uid = _newUid();
+      String photoPath = '';
+      if (image != null && await image.exists()) {
+        photoPath = await LocalMedia.instance.saveProfilePhoto(uid, image);
+      }
+
       final user = model.User(
-        name: username.trim(),
-        email: LocalDb.demoEmail,
-        uid: LocalDb.demoUid,
-        profilePhoto: photoPath.isNotEmpty
-            ? photoPath
-            : (existing?.profilePhoto ?? ''),
+        name: name,
+        email: em,
+        uid: uid,
+        profilePhoto: photoPath,
+        password: pw, // plaintext MVP — see FORGE_BUILD_NOTES.md
       );
-      await LocalDb.instance.upsertUser(user);
+      await LocalDb.instance.insertUser(user);
+
+      _pickedImage.value = null;
       _user.value = AppUser(uid: user.uid, email: user.email);
       await _persistSession(user.uid);
 
       _closeLoadingDialog();
       isLoading.value = false;
       Get.offAll(() => const HomeScreen());
+    } on DuplicateEmailException {
+      _closeLoadingDialog();
+      isLoading.value = false;
+      Get.snackbar(
+        l10n?.errorCreatingAccount ?? 'Error Creating Account',
+        l10n?.emailAlreadyRegistered ?? 'This email is already registered',
+        duration: const Duration(seconds: 6),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } catch (e, st) {
       debugPrint('registerUser failed: $e\n$st');
       _closeLoadingDialog();
@@ -165,6 +183,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Login against SQLite users table (email + password). No hardcoded accounts.
   Future<void> loginUser(String email, String password) async {
     if (isLoading.value) return;
     final l10n = tryL10n();
@@ -177,28 +196,21 @@ class AuthController extends GetxController {
         return;
       }
       final em = email.trim().toLowerCase();
-      if (em != LocalDb.demoEmail || password != LocalDb.demoPassword) {
-        Get.snackbar(
-          l10n?.errorLoggingIn ?? 'Error Logging in',
-          'Invalid credentials. Use ${LocalDb.demoEmail} / ${LocalDb.demoPassword}',
-          duration: const Duration(seconds: 6),
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        return;
-      }
 
       isLoading.value = true;
       _showLoadingDialog();
 
-      var row = await LocalDb.instance.getUserByUid(LocalDb.demoUid);
-      if (row == null) {
-        row = model.User(
-          name: LocalDb.demoName,
-          email: LocalDb.demoEmail,
-          uid: LocalDb.demoUid,
-          profilePhoto: '',
+      final row = await LocalDb.instance.getUserByEmail(em);
+      if (row == null || row.password != password) {
+        _closeLoadingDialog();
+        isLoading.value = false;
+        Get.snackbar(
+          l10n?.errorLoggingIn ?? 'Error Logging in',
+          l10n?.invalidCredentials ?? 'Invalid email or password',
+          duration: const Duration(seconds: 6),
+          snackPosition: SnackPosition.BOTTOM,
         );
-        await LocalDb.instance.upsertUser(row);
+        return;
       }
 
       _user.value = AppUser(uid: row.uid, email: row.email);
@@ -223,6 +235,7 @@ class AuthController extends GetxController {
   void signOut() async {
     await _clearSession();
     _user.value = null;
+    _pickedImage.value = null;
     Get.offAll(() => LoginScreen());
   }
 }
