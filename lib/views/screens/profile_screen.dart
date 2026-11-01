@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
 import 'package:get/instance_manager.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/controllers/profile_controller.dart';
+import 'package:tiktok_tutorial/views/widgets/language_switcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String uid;
@@ -27,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GetBuilder<ProfileController>(
         init: ProfileController(),
         builder: (controller) {
@@ -41,8 +44,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: const Icon(
                 Icons.person_add_alt_1_outlined,
               ),
-              actions: const [
-                Icon(Icons.more_horiz),
+              actions: [
+                if (widget.uid == authController.user.uid)
+                  const LanguageSwitcher(compact: true),
+                const Icon(Icons.more_horiz),
+                const SizedBox(width: 8),
               ],
               title: Text(
                 controller.user['name'],
@@ -94,9 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 5),
-                                  const Text(
-                                    'Following',
-                                    style: TextStyle(
+                                  Text(
+                                    l10n.following,
+                                    style: const TextStyle(
                                       fontSize: 14,
                                     ),
                                   ),
@@ -120,9 +126,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 5),
-                                  const Text(
-                                    'Followers',
-                                    style: TextStyle(
+                                  Text(
+                                    l10n.followers,
+                                    style: const TextStyle(
                                       fontSize: 14,
                                     ),
                                   ),
@@ -146,9 +152,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 5),
-                                  const Text(
-                                    'Likes',
-                                    style: TextStyle(
+                                  Text(
+                                    l10n.likes,
+                                    style: const TextStyle(
                                       fontSize: 14,
                                     ),
                                   ),
@@ -178,10 +184,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 },
                                 child: Text(
                                   widget.uid == authController.user.uid
-                                      ? 'Sign Out'
+                                      ? l10n.signOut
                                       : controller.user['isFollowing']
-                                          ? 'Unfollow'
-                                          : 'Follow',
+                                          ? l10n.unfollow
+                                          : l10n.follow,
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,

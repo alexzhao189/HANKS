@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 import 'package:tiktok_tutorial/controllers/upload_video_controller.dart';
 import 'package:tiktok_tutorial/views/widgets/text_input_field.dart';
@@ -20,8 +21,8 @@ class ConfirmScreen extends StatefulWidget {
 
 class _ConfirmScreenState extends State<ConfirmScreen> {
   late VideoPlayerController controller;
-  TextEditingController _songController = TextEditingController();
-  TextEditingController _captionController = TextEditingController();
+  final TextEditingController _songController = TextEditingController();
+  final TextEditingController _captionController = TextEditingController();
 
   UploadVideoController uploadVideoController =
       Get.put(UploadVideoController());
@@ -46,6 +47,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -71,7 +73,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                     width: MediaQuery.of(context).size.width - 20,
                     child: TextInputField(
                       controller: _songController,
-                      labelText: 'Song Name',
+                      labelText: l10n.songName,
                       icon: Icons.music_note,
                     ),
                   ),
@@ -83,7 +85,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                     width: MediaQuery.of(context).size.width - 20,
                     child: TextInputField(
                       controller: _captionController,
-                      labelText: 'Caption',
+                      labelText: l10n.caption,
                       icon: Icons.closed_caption,
                     ),
                   ),
@@ -95,9 +97,9 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                           _songController.text,
                           _captionController.text,
                           widget.videoPath),
-                      child: const Text(
-                        'Share!',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.share,
+                        style: const TextStyle(
                           fontSize: 20,
                           color: Colors.white,
                         ),

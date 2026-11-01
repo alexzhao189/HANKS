@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/views/widgets/custom_icon.dart';
 
@@ -14,6 +15,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final pages = buildPages(context);
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
         onTap: (idx) {
@@ -26,26 +29,26 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Colors.red,
         unselectedItemColor: Colors.white,
         currentIndex: pageIdx,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home, size: 30),
-            label: 'Home',
+            icon: const Icon(Icons.home, size: 30),
+            label: l10n.home,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search, size: 30),
-            label: 'Search',
+            icon: const Icon(Icons.search, size: 30),
+            label: l10n.search,
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: CustomIcon(),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.message, size: 30),
-            label: 'Messages',
+            icon: const Icon(Icons.message, size: 30),
+            label: l10n.messages,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person, size: 30),
-            label: 'Profile',
+            icon: const Icon(Icons.person, size: 30),
+            label: l10n.profile,
           ),
         ],
       ),

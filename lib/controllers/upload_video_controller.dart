@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
 import 'package:tiktok_tutorial/constants.dart';
+import 'package:tiktok_tutorial/l10n/l10n_helper.dart';
 import 'package:tiktok_tutorial/models/video.dart';
 import 'package:video_compress/video_compress.dart';
 
@@ -67,8 +68,9 @@ class UploadVideoController extends GetxController {
           );
       Get.back();
     } catch (e) {
+      final l10n = tryL10n();
       Get.snackbar(
-        'Error Uploading Video',
+        l10n?.errorUploadingVideo ?? 'Error Uploading Video',
         e.toString(),
       );
     }

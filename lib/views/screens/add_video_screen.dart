@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/views/screens/confirm_screen.dart';
@@ -23,6 +24,7 @@ class AddVideoScreen extends StatelessWidget {
   }
 
   showOptionsDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return showDialog(
       context: context,
       builder: (context) => SimpleDialog(
@@ -30,13 +32,13 @@ class AddVideoScreen extends StatelessWidget {
           SimpleDialogOption(
             onPressed: () => pickVideo(ImageSource.gallery, context),
             child: Row(
-              children: const [
-                Icon(Icons.image),
+              children: [
+                const Icon(Icons.image),
                 Padding(
-                  padding: EdgeInsets.all(7.0),
+                  padding: const EdgeInsets.all(7.0),
                   child: Text(
-                    'Gallery',
-                    style: TextStyle(fontSize: 20),
+                    l10n.gallery,
+                    style: const TextStyle(fontSize: 20),
                   ),
                 ),
               ],
@@ -45,13 +47,13 @@ class AddVideoScreen extends StatelessWidget {
           SimpleDialogOption(
             onPressed: () => pickVideo(ImageSource.camera, context),
             child: Row(
-              children: const [
-                Icon(Icons.camera_alt),
+              children: [
+                const Icon(Icons.camera_alt),
                 Padding(
-                  padding: EdgeInsets.all(7.0),
+                  padding: const EdgeInsets.all(7.0),
                   child: Text(
-                    'Camera',
-                    style: TextStyle(fontSize: 20),
+                    l10n.camera,
+                    style: const TextStyle(fontSize: 20),
                   ),
                 ),
               ],
@@ -60,13 +62,13 @@ class AddVideoScreen extends StatelessWidget {
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Row(
-              children: const [
-                Icon(Icons.cancel),
+              children: [
+                const Icon(Icons.cancel),
                 Padding(
-                  padding: EdgeInsets.all(7.0),
+                  padding: const EdgeInsets.all(7.0),
                   child: Text(
-                    'Cancel',
-                    style: TextStyle(fontSize: 20),
+                    l10n.cancel,
+                    style: const TextStyle(fontSize: 20),
                   ),
                 ),
               ],
@@ -79,6 +81,7 @@ class AddVideoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Center(
         child: InkWell(
@@ -87,10 +90,10 @@ class AddVideoScreen extends StatelessWidget {
             width: 190,
             height: 50,
             decoration: BoxDecoration(color: buttonColor),
-            child: const Center(
+            child: Center(
               child: Text(
-                'Add Video',
-                style: TextStyle(
+                l10n.addVideo,
+                style: const TextStyle(
                   fontSize: 20,
                   color: Colors.black,
                   fontWeight: FontWeight.bold,

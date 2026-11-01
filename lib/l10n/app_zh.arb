@@ -1,0 +1,51 @@
+{
+  "@@locale": "zh",
+  "appTitle": "TikTok 克隆",
+  "login": "登录",
+  "register": "注册",
+  "email": "邮箱",
+  "password": "密码",
+  "username": "用户名",
+  "dontHaveAccount": "还没有账号？",
+  "alreadyHaveAccount": "已有账号？",
+  "home": "首页",
+  "search": "搜索",
+  "messages": "消息",
+  "profile": "我的",
+  "messagesScreen": "消息页面",
+  "gallery": "相册",
+  "camera": "相机",
+  "cancel": "取消",
+  "addVideo": "添加视频",
+  "comment": "评论",
+  "send": "发送",
+  "likesCount": "{count} 个赞",
+  "@likesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "songName": "歌曲名称",
+  "caption": "标题",
+  "share": "发布！",
+  "following": "关注",
+  "followers": "粉丝",
+  "likes": "获赞",
+  "signOut": "退出登录",
+  "unfollow": "取消关注",
+  "follow": "关注",
+  "searchHint": "搜索",
+  "searchEmpty": "搜索用户！",
+  "profilePictureTitle": "头像",
+  "profilePictureSuccess": "已成功选择头像！",
+  "errorCreatingAccount": "创建账号失败",
+  "pleaseEnterAllFields": "请填写所有字段",
+  "errorLoggingIn": "登录失败",
+  "errorUploadingVideo": "上传视频失败",
+  "language": "语言",
+  "languageEnglish": "English",
+  "languageChinese": "简体中文",
+  "languageJapanese": "日本語"
+}

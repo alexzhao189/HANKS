@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tiktok_tutorial/constants.dart';
+import 'package:tiktok_tutorial/l10n/l10n_helper.dart';
 import 'package:tiktok_tutorial/models/user.dart' as model;
 import 'package:tiktok_tutorial/views/screens/auth/login_screen.dart';
 import 'package:tiktok_tutorial/views/screens/home_screen.dart';
@@ -36,8 +37,12 @@ class AuthController extends GetxController {
     final pickedImage =
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
-      Get.snackbar('Profile Picture',
-          'You have successfully selected your profile picture!');
+      final l10n = tryL10n();
+      Get.snackbar(
+        l10n?.profilePictureTitle ?? 'Profile Picture',
+        l10n?.profilePictureSuccess ??
+            'You have successfully selected your profile picture!',
+      );
     }
     _pickedImage = Rx<File?>(File(pickedImage!.path));
   }
@@ -80,14 +85,16 @@ class AuthController extends GetxController {
             .doc(cred.user!.uid)
             .set(user.toJson());
       } else {
+        final l10n = tryL10n();
         Get.snackbar(
-          'Error Creating Account',
-          'Please enter all the fields',
+          l10n?.errorCreatingAccount ?? 'Error Creating Account',
+          l10n?.pleaseEnterAllFields ?? 'Please enter all the fields',
         );
       }
     } catch (e) {
+      final l10n = tryL10n();
       Get.snackbar(
-        'Error Creating Account',
+        l10n?.errorCreatingAccount ?? 'Error Creating Account',
         e.toString(),
       );
     }
@@ -99,14 +106,16 @@ class AuthController extends GetxController {
         await firebaseAuth.signInWithEmailAndPassword(
             email: email, password: password);
       } else {
+        final l10n = tryL10n();
         Get.snackbar(
-          'Error Logging in',
-          'Please enter all the fields',
+          l10n?.errorLoggingIn ?? 'Error Logging in',
+          l10n?.pleaseEnterAllFields ?? 'Please enter all the fields',
         );
       }
     } catch (e) {
+      final l10n = tryL10n();
       Get.snackbar(
-        'Error Loggin gin',
+        l10n?.errorLoggingIn ?? 'Error Logging in',
         e.toString(),
       );
     }

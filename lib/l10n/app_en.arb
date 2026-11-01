@@ -1,0 +1,51 @@
+{
+  "@@locale": "en",
+  "appTitle": "TikTok Clone",
+  "login": "Login",
+  "register": "Register",
+  "email": "Email",
+  "password": "Password",
+  "username": "Username",
+  "dontHaveAccount": "Don't have an account? ",
+  "alreadyHaveAccount": "Already have an account? ",
+  "home": "Home",
+  "search": "Search",
+  "messages": "Messages",
+  "profile": "Profile",
+  "messagesScreen": "Messages Screen",
+  "gallery": "Gallery",
+  "camera": "Camera",
+  "cancel": "Cancel",
+  "addVideo": "Add Video",
+  "comment": "Comment",
+  "send": "Send",
+  "likesCount": "{count} likes",
+  "@likesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "songName": "Song Name",
+  "caption": "Caption",
+  "share": "Share!",
+  "following": "Following",
+  "followers": "Followers",
+  "likes": "Likes",
+  "signOut": "Sign Out",
+  "unfollow": "Unfollow",
+  "follow": "Follow",
+  "searchHint": "Search",
+  "searchEmpty": "Search for users!",
+  "profilePictureTitle": "Profile Picture",
+  "profilePictureSuccess": "You have successfully selected your profile picture!",
+  "errorCreatingAccount": "Error Creating Account",
+  "pleaseEnterAllFields": "Please enter all the fields",
+  "errorLoggingIn": "Error Logging in",
+  "errorUploadingVideo": "Error Uploading Video",
+  "language": "Language",
+  "languageEnglish": "English",
+  "languageChinese": "简体中文",
+  "languageJapanese": "日本語"
+}

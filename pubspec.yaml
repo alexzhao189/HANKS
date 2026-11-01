@@ -15,8 +15,12 @@ dependencies:
   firebase_storage: ^10.2.5
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   get: ^4.6.1
   image_picker: ^0.8.4+4
+  intl: ^0.17.0
+  shared_preferences: ^2.0.15
   timeago: ^3.1.0
   video_compress: ^3.1.0
   video_player: ^2.2.11
@@ -27,6 +31,7 @@ dev_dependencies:
     sdk: flutter
 
 flutter:
+  generate: true
   uses-material-design: true
 
 # forge: firebase_core 1.24 still calls verifyExtends; PI 4.5.2+ renamed to verify

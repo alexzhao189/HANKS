@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:tiktok_tutorial/controllers/search_controller.dart';
 import 'package:get/get.dart';
 import 'package:tiktok_tutorial/models/user.dart';
@@ -11,15 +12,16 @@ class SearchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Obx(() {
       return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.red,
           title: TextFormField(
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               filled: false,
-              hintText: 'Search',
-              hintStyle: TextStyle(
+              hintText: l10n.searchHint,
+              hintStyle: const TextStyle(
                 fontSize: 18,
                 color: Colors.white,
               ),
@@ -28,10 +30,10 @@ class SearchScreen extends StatelessWidget {
           ),
         ),
         body: searchController.searchedUsers.isEmpty
-            ? const Center(
+            ? Center(
                 child: Text(
-                  'Search for users!',
-                  style: TextStyle(
+                  l10n.searchEmpty,
+                  style: const TextStyle(
                     fontSize: 25,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

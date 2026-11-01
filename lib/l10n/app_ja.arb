@@ -1,0 +1,51 @@
+{
+  "@@locale": "ja",
+  "appTitle": "TikTokクローン",
+  "login": "ログイン",
+  "register": "登録",
+  "email": "メール",
+  "password": "パスワード",
+  "username": "ユーザー名",
+  "dontHaveAccount": "アカウントをお持ちでない方は ",
+  "alreadyHaveAccount": "すでにアカウントをお持ちの方は ",
+  "home": "ホーム",
+  "search": "検索",
+  "messages": "メッセージ",
+  "profile": "プロフィール",
+  "messagesScreen": "メッセージ画面",
+  "gallery": "ギャラリー",
+  "camera": "カメラ",
+  "cancel": "キャンセル",
+  "addVideo": "動画を追加",
+  "comment": "コメント",
+  "send": "送信",
+  "likesCount": "{count} いいね",
+  "@likesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "songName": "曲名",
+  "caption": "キャプション",
+  "share": "シェア！",
+  "following": "フォロー中",
+  "followers": "フォロワー",
+  "likes": "いいね",
+  "signOut": "ログアウト",
+  "unfollow": "フォロー解除",
+  "follow": "フォロー",
+  "searchHint": "検索",
+  "searchEmpty": "ユーザーを検索！",
+  "profilePictureTitle": "プロフィール写真",
+  "profilePictureSuccess": "プロフィール写真を選択しました！",
+  "errorCreatingAccount": "アカウント作成エラー",
+  "pleaseEnterAllFields": "すべての項目を入力してください",
+  "errorLoggingIn": "ログインエラー",
+  "errorUploadingVideo": "動画アップロードエラー",
+  "language": "言語",
+  "languageEnglish": "English",
+  "languageChinese": "简体中文",
+  "languageJapanese": "日本語"
+}

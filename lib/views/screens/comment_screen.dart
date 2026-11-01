@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/controllers/comment_controller.dart';
@@ -17,6 +18,7 @@ class CommentScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final l10n = AppLocalizations.of(context)!;
     commentController.updatePostId(id);
 
     return Scaffold(
@@ -72,7 +74,7 @@ class CommentScreen extends StatelessWidget {
                                 width: 10,
                               ),
                               Text(
-                                '${comment.likes.length} likes',
+                                l10n.likesCount(comment.likes.length),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.white,
@@ -104,19 +106,19 @@ class CommentScreen extends StatelessWidget {
                     fontSize: 16,
                     color: Colors.white,
                   ),
-                  decoration: const InputDecoration(
-                    labelText: 'Comment',
-                    labelStyle: TextStyle(
+                  decoration: InputDecoration(
+                    labelText: l10n.comment,
+                    labelStyle: const TextStyle(
                       fontSize: 20,
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
-                    enabledBorder: UnderlineInputBorder(
+                    enabledBorder: const UnderlineInputBorder(
                       borderSide: BorderSide(
                         color: Colors.red,
                       ),
                     ),
-                    focusedBorder: UnderlineInputBorder(
+                    focusedBorder: const UnderlineInputBorder(
                       borderSide: BorderSide(
                         color: Colors.red,
                       ),
@@ -126,9 +128,9 @@ class CommentScreen extends StatelessWidget {
                 trailing: TextButton(
                   onPressed: () =>
                       commentController.postComment(_commentController.text),
-                  child: const Text(
-                    'Send',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.send,
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white,
                     ),
