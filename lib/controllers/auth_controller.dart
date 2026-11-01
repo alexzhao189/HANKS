@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
@@ -30,6 +31,18 @@ class AuthController extends GetxController {
     _user = Rx<User?>(firebaseAuth.currentUser);
     _user.bindStream(firebaseAuth.authStateChanges());
     ever(_user, _setInitialScreen);
+
+    // Storage uploads from CN / flaky VPN benefit from longer retries.
+    try {
+      firebaseStorage.setMaxUploadRetryTime(const Duration(seconds: 120));
+      firebaseStorage.setMaxOperationRetryTime(const Duration(seconds: 120));
+      debugPrint(
+        'FirebaseStorage ready: bucket=${firebaseStorage.bucket} '
+        'app=${firebaseStorage.app.name}',
+      );
+    } catch (e, st) {
+      debugPrint('FirebaseStorage retry config failed: $e\n$st');
+    }
   }
 
   _setInitialScreen(User? user) {
@@ -43,8 +56,14 @@ class AuthController extends GetxController {
 
   void pickImage() async {
     try {
-      final pickedImage =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
+      // Downscale/compress at pick time — large gallery HEIC/JPEG often
+      // triggers firebase_storage [unknown] on putFile over weak links.
+      final pickedImage = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
+      );
       if (pickedImage != null) {
         final file = File(pickedImage.path);
         if (!await file.exists()) {
@@ -55,6 +74,11 @@ class AuthController extends GetxController {
           return;
         }
         _pickedImage.value = file;
+        final bytes = await file.length();
+        debugPrint(
+          'pickImage ok: path=${file.path} sizeBytes=$bytes '
+          'mime=${pickedImage.mimeType}',
+        );
         final l10n = tryL10n();
         Get.snackbar(
           l10n?.profilePictureTitle ?? 'Profile Picture',
@@ -62,7 +86,8 @@ class AuthController extends GetxController {
               'You have successfully selected your profile picture!',
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('pickImage failed: $e\n$st');
       Get.snackbar('Profile Picture', 'Failed to pick image: $e');
     }
   }
@@ -73,24 +98,79 @@ class AuthController extends GetxController {
     if (uid == null) {
       throw StateError('Not signed in; cannot upload profile photo.');
     }
-    Reference ref =
-        firebaseStorage.ref().child('profilePics').child(uid);
 
-    UploadTask uploadTask = ref.putFile(image);
-    TaskSnapshot snap = await uploadTask.timeout(
-      const Duration(seconds: 90),
-      onTimeout: () {
-        uploadTask.cancel();
-        throw TimeoutException(
-          'Storage upload timed out after 90s. Check Storage rules / network.',
-        );
+    final path = 'profilePics/$uid';
+    final bucket = firebaseStorage.bucket;
+    final fileSize = await image.length();
+    debugPrint(
+      '_uploadToStorage start: bucket=$bucket path=$path '
+      'file=${image.path} sizeBytes=$fileSize '
+      'authUid=$uid',
+    );
+
+    if (fileSize <= 0) {
+      throw StateError('Profile photo is empty (0 bytes). Pick again.');
+    }
+    // Soft cap — if somehow still huge, fail with a clear message.
+    if (fileSize > 8 * 1024 * 1024) {
+      throw StateError(
+        'Profile photo is ${fileSize ~/ (1024 * 1024)}MB; '
+        'please pick a smaller image (under 8MB).',
+      );
+    }
+
+    final Reference ref = firebaseStorage.ref().child('profilePics').child(uid);
+
+    // Prefer putData + explicit contentType: more reliable than putFile on
+    // Android (path/URI quirks) and satisfies rules that match image/*.
+    final Uint8List bytes = await image.readAsBytes();
+    final metadata = SettableMetadata(
+      contentType: 'image/jpeg',
+      customMetadata: <String, String>{
+        'uid': uid,
+        'source': 'signup_profile',
       },
     );
-    String downloadUrl = await snap.ref.getDownloadURL().timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => throw TimeoutException('getDownloadURL timed out.'),
-    );
-    return downloadUrl;
+
+    UploadTask uploadTask = ref.putData(bytes, metadata);
+    try {
+      TaskSnapshot snap = await uploadTask.timeout(
+        const Duration(seconds: 120),
+        onTimeout: () {
+          uploadTask.cancel();
+          throw TimeoutException(
+            'Storage upload timed out after 120s '
+            '(bucket=$bucket path=$path size=$fileSize). '
+            'Check VPN/network, Storage rules, and App Check.',
+          );
+        },
+      );
+      debugPrint(
+        '_uploadToStorage putData done: state=${snap.state} '
+        'bytesTransferred=${snap.bytesTransferred}',
+      );
+      String downloadUrl = await snap.ref.getDownloadURL().timeout(
+        const Duration(seconds: 45),
+        onTimeout: () => throw TimeoutException(
+          'getDownloadURL timed out (bucket=$bucket path=$path).',
+        ),
+      );
+      debugPrint('_uploadToStorage ok: urlLen=${downloadUrl.length}');
+      return downloadUrl;
+    } on FirebaseException catch (e, st) {
+      debugPrint(
+        '_uploadToStorage FirebaseException: plugin=${e.plugin} '
+        'code=${e.code} message=${e.message} '
+        'bucket=$bucket path=$path sizeBytes=$fileSize\n$st',
+      );
+      rethrow;
+    } catch (e, st) {
+      debugPrint(
+        '_uploadToStorage failed: $e bucket=$bucket path=$path '
+        'sizeBytes=$fileSize\n$st',
+      );
+      rethrow;
+    }
   }
 
   void _closeLoadingDialog() {
@@ -112,7 +192,16 @@ class AuthController extends GetxController {
       return 'Auth [${e.code}]: ${e.message ?? e.code}';
     }
     if (e is FirebaseException) {
-      return '${e.plugin} [${e.code}]: ${e.message ?? e.code}';
+      final base = '${e.plugin} [${e.code}]: ${e.message ?? e.code}';
+      if (e.plugin.contains('storage')) {
+        final bucket = firebaseStorage.bucket;
+        return '$base | bucket=$bucket. '
+            'If this persists: Console → Storage rules must allow '
+            'write when request.auth != null for profilePics/{uid}; '
+            'disable App Check enforcement; confirm VPN reaches '
+            'firebasestorage.googleapis.com.';
+      }
+      return base;
     }
     if (e is TimeoutException) {
       return e.message ?? 'Operation timed out';
@@ -167,6 +256,10 @@ class AuthController extends GetxController {
               'and that Email/Password is enabled on the Firebase project.',
             ),
           );
+      debugPrint(
+        'registerUser Auth ok: uid=${cred.user?.uid} '
+        'email=${cred.user?.email}',
+      );
 
       // 2) Storage (common hang / rules failure point)
       String downloadUrl = await _uploadToStorage(image);
@@ -188,13 +281,14 @@ class AuthController extends GetxController {
               'Firestore set timed out. Check Firestore rules / network.',
             ),
           );
+      debugPrint('registerUser Firestore ok: uid=${cred.user!.uid}');
 
       _completingRegistration = false;
       _closeLoadingDialog();
       isLoading.value = false;
       Get.offAll(() => const HomeScreen());
-    } catch (e) {
-      debugPrint('registerUser failed: $e');
+    } catch (e, st) {
+      debugPrint('registerUser failed: $e\n$st');
       _completingRegistration = false;
       _closeLoadingDialog();
       isLoading.value = false;
@@ -208,7 +302,7 @@ class AuthController extends GetxController {
       Get.snackbar(
         l10n?.errorCreatingAccount ?? 'Error Creating Account',
         _friendlyError(e),
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 12),
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -242,8 +336,8 @@ class AuthController extends GetxController {
       _closeLoadingDialog();
       isLoading.value = false;
       // Navigation via authStateChanges / _setInitialScreen
-    } catch (e) {
-      debugPrint('loginUser failed: $e');
+    } catch (e, st) {
+      debugPrint('loginUser failed: $e\n$st');
       _closeLoadingDialog();
       isLoading.value = false;
       Get.snackbar(
