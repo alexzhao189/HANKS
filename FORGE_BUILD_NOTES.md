@@ -10,13 +10,17 @@
 - Duplicate email → snackbar `emailAlreadyRegistered` (en/zh/ja). Wrong password → `invalidCredentials`.
 - i18n (en/zh/ja) kept; GetX patterns unchanged.
 
-## Android packaging (phone install)
+## Android packaging (emulator + phone)
 - minSdk 21 (unchanged from firebase-demo)
-- `ndk.abiFilters`: armeabi-v7a + arm64-v8a (required for physical arm64 phones e.g. moto X30 Pro / Android 15)
-- Build for captain phone: `fvm flutter build apk --debug --target-platform android-arm,android-arm64`
+- `ndk.abiFilters`: `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`
+  - arm* → physical phones (e.g. moto X30 Pro)
+  - x86* → Android emulator (`sdk gphone64 x86 64`); without these, launch crashes with `libflutter.so` not found
+- Emulator / day-to-day: `fvm flutter run` (or `fvm flutter run -d emulator-XXXX`)
+- Phone sideload fat debug APK: `fvm flutter build apk --debug` (all filtered ABIs included)
+  - Optional narrower phone-only APK: `fvm flutter build apk --debug --target-platform android-arm,android-arm64`
 - Output: `build\app\outputs\flutter-apk\app-debug.apk`
-- Do NOT deliver an emulator-only APK (x86 / x86_64 only) — installer shows 应用与您的手机不兼容
-- 2026-11-02: failed APK had native-code only x86+x86_64; fixed by arm rebuild + abiFilters
+- Verify native libs: unzip APK and check `lib/arm64-v8a/libflutter.so` and `lib/x86_64/libflutter.so` both exist
+- 2026-11-02: arm-only abiFilters broke emulator (`UnsatisfiedLinkError: libflutter.so`); expanded filters to include x86/x86_64 while keeping arm64 for phone
 
 ## Historical Firebase demo (tagged `firebase-demo`)
 - FVM Flutter 3.7.12 / Dart 2.19.6
