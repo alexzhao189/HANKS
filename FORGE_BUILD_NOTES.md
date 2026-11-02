@@ -44,11 +44,10 @@
 - Bottom tab return to Home reloads feed; after Share, pop to shell + switch to Home tab
 - Empty feed shows i18n noVideosPullToRefresh
 
-
 ## Display name / branding (2026-11-02 wrap-up)
-- User-visible product name set to **HANKS DEMO** (Latin across en/zh/ja):
-  - `android/app/src/main/AndroidManifest.xml` `android:label`
+- In-app product title: **HANKS DEMO** (Latin across en/zh/ja)
   - `lib/main.dart` `GetMaterialApp.title`
-  - `lib/l10n/app_{en,zh,ja}.arb` `appTitle` (login/register headers via `l10n.appTitle`)
+  - `lib/l10n/app_{en,zh,ja}.arb` `appTitle` (login/register via `l10n.appTitle`)
   - `ios/Runner/Info.plist` `CFBundleDisplayName` / `CFBundleName`
+- Android launcher label after install: **hanksdemo** (`android/app/src/main/AndroidManifest.xml` `android:label`)
 - Package id `com.example.tiktok_tutorial` and GitHub repo name unchanged.
