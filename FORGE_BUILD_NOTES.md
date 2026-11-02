@@ -38,3 +38,9 @@
 - apply com.google.gms.google-services at bottom of android/app/build.gradle
 - Toolchain: Kotlin 1.8.22, AGP 7.3.1, google-services 4.3.15, Gradle 7.6.3
 
+
+## Home feed refresh (2026-11-02)
+- Pull-to-refresh on Home (RefreshIndicator -> SQLite getAllVideos)
+- Bottom tab return to Home reloads feed; after Share, pop to shell + switch to Home tab
+- Empty feed shows i18n noVideosPullToRefresh
+

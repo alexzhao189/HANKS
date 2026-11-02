@@ -9,28 +9,40 @@ import 'package:tiktok_tutorial/views/screens/confirm_screen.dart';
 class AddVideoScreen extends StatelessWidget {
   const AddVideoScreen({Key? key}) : super(key: key);
 
-  pickVideo(ImageSource src, BuildContext context) async {
+  Future<void> pickVideo(
+    ImageSource src,
+    BuildContext scaffoldContext,
+    BuildContext dialogContext,
+  ) async {
     final video = await ImagePicker().pickVideo(source: src);
-    if (video != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ConfirmScreen(
-            videoFile: File(video.path),
-            videoPath: video.path,
-          ),
-        ),
-      );
+    if (video == null) return;
+    // Close options dialog first; then push confirm from the tab scaffold.
+    if (Navigator.of(dialogContext).canPop()) {
+      Navigator.of(dialogContext).pop();
     }
+    if (!scaffoldContext.mounted) return;
+    await Navigator.of(scaffoldContext).push(
+      MaterialPageRoute(
+        builder: (context) => ConfirmScreen(
+          videoFile: File(video.path),
+          videoPath: video.path,
+        ),
+      ),
+    );
   }
 
-  showOptionsDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+  showOptionsDialog(BuildContext scaffoldContext) {
+    final l10n = AppLocalizations.of(scaffoldContext)!;
     return showDialog(
-      context: context,
-      builder: (context) => SimpleDialog(
+      context: scaffoldContext,
+      builder: (dialogContext) => SimpleDialog(
         children: [
           SimpleDialogOption(
-            onPressed: () => pickVideo(ImageSource.gallery, context),
+            onPressed: () => pickVideo(
+              ImageSource.gallery,
+              scaffoldContext,
+              dialogContext,
+            ),
             child: Row(
               children: [
                 const Icon(Icons.image),
@@ -45,7 +57,11 @@ class AddVideoScreen extends StatelessWidget {
             ),
           ),
           SimpleDialogOption(
-            onPressed: () => pickVideo(ImageSource.camera, context),
+            onPressed: () => pickVideo(
+              ImageSource.camera,
+              scaffoldContext,
+              dialogContext,
+            ),
             child: Row(
               children: [
                 const Icon(Icons.camera_alt),
@@ -60,7 +76,7 @@ class AddVideoScreen extends StatelessWidget {
             ),
           ),
           SimpleDialogOption(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Row(
               children: [
                 const Icon(Icons.cancel),

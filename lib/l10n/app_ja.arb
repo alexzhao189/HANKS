@@ -49,5 +49,6 @@
   "languageChinese": "简体中文",
   "languageJapanese": "日本語",
   "emailAlreadyRegistered": "このメールアドレスは既に登録されています",
-  "invalidCredentials": "メールまたはパスワードが正しくありません"
+  "invalidCredentials": "メールまたはパスワードが正しくありません",
+  "noVideosPullToRefresh": "動画はまだありません。下に引っ張って更新。"
 }

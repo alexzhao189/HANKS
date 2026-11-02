@@ -4,9 +4,7 @@ import 'package:tiktok_tutorial/services/local_db.dart';
 import 'package:tiktok_tutorial/constants.dart';
 
 class VideoController extends GetxController {
-  final Rx<List<Video>> _videoList = Rx<List<Video>>([]);
-
-  List<Video> get videoList => _videoList.value;
+  final RxList<Video> videoList = <Video>[].obs;
 
   @override
   void onInit() {
@@ -15,7 +13,8 @@ class VideoController extends GetxController {
   }
 
   Future<void> refreshVideos() async {
-    _videoList.value = await LocalDb.instance.getAllVideos();
+    final videos = await LocalDb.instance.getAllVideos();
+    videoList.assignAll(videos);
   }
 
   Future<void> likeVideo(String id) async {

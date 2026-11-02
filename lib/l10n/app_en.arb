@@ -49,5 +49,6 @@
   "languageChinese": "简体中文",
   "languageJapanese": "日本語",
   "emailAlreadyRegistered": "This email is already registered",
-  "invalidCredentials": "Invalid email or password"
+  "invalidCredentials": "Invalid email or password",
+  "noVideosPullToRefresh": "No videos yet. Pull down to refresh."
 }

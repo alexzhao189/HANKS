@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:tiktok_tutorial/constants.dart';
 import 'package:tiktok_tutorial/services/media_paths.dart';
 import 'package:tiktok_tutorial/controllers/video_controller.dart';
 import 'package:tiktok_tutorial/views/screens/comment_screen.dart';
 import 'package:tiktok_tutorial/views/widgets/circle_animation.dart';
 import 'package:tiktok_tutorial/views/widgets/video_player_iten.dart';
-import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
 
 class VideoScreen extends StatelessWidget {
@@ -74,170 +74,206 @@ class VideoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Obx(() {
-        return PageView.builder(
-          itemCount: videoController.videoList.length,
-          controller: PageController(initialPage: 0, viewportFraction: 1),
-          scrollDirection: Axis.vertical,
-          itemBuilder: (context, index) {
-            final data = videoController.videoList[index];
-            return Stack(
+        final videos = videoController.videoList;
+        if (videos.isEmpty) {
+          return RefreshIndicator(
+            color: Colors.red,
+            onRefresh: () => videoController.refreshVideos(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                VideoPlayerItem(
-                  videoUrl: data.videoUrl,
-                ),
-                Column(
-                  children: [
-                    const SizedBox(
-                      height: 100,
+                SizedBox(
+                  height: size.height * 0.85,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        l10n.noVideosPullToRefresh,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
-                    Expanded(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.only(
-                                left: 20,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          color: Colors.red,
+          onRefresh: () => videoController.refreshVideos(),
+          child: PageView.builder(
+            itemCount: videos.length,
+            controller: PageController(initialPage: 0, viewportFraction: 1),
+            scrollDirection: Axis.vertical,
+            physics: const AlwaysScrollableScrollPhysics(parent: PageScrollPhysics()),
+            itemBuilder: (context, index) {
+              final data = videos[index];
+              return Stack(
+                children: [
+                  VideoPlayerItem(
+                    videoUrl: data.videoUrl,
+                  ),
+                  Column(
+                    children: [
+                      const SizedBox(
+                        height: 100,
+                      ),
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.max,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.only(
+                                  left: 20,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Text(
+                                      data.username,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      data.caption,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.music_note,
+                                          size: 15,
+                                          color: Colors.white,
+                                        ),
+                                        Text(
+                                          data.songName,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  ],
+                                ),
                               ),
+                            ),
+                            Container(
+                              width: 100,
+                              margin: EdgeInsets.only(top: size.height / 5),
                               child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  Text(
-                                    data.username,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  buildProfile(
+                                    data.profilePhoto,
                                   ),
-                                  Text(
-                                    data.caption,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Row(
+                                  Column(
                                     children: [
-                                      const Icon(
-                                        Icons.music_note,
-                                        size: 15,
-                                        color: Colors.white,
-                                      ),
-                                      Text(
-                                        data.songName,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
+                                      InkWell(
+                                        onTap: () =>
+                                            videoController.likeVideo(data.id),
+                                        child: Icon(
+                                          Icons.favorite,
+                                          size: 40,
+                                          color: data.likes.contains(
+                                                  authController.user.uid)
+                                              ? Colors.red
+                                              : Colors.white,
                                         ),
                                       ),
+                                      const SizedBox(height: 7),
+                                      Text(
+                                        data.likes.length.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      )
                                     ],
-                                  )
+                                  ),
+                                  Column(
+                                    children: [
+                                      InkWell(
+                                        onTap: () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => CommentScreen(
+                                              id: data.id,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.comment,
+                                          size: 40,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 7),
+                                      Text(
+                                        data.commentCount.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      InkWell(
+                                        onTap: () {},
+                                        child: const Icon(
+                                          Icons.reply,
+                                          size: 40,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 7),
+                                      Text(
+                                        data.shareCount.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                  CircleAnimation(
+                                    child: buildMusicAlbum(data.profilePhoto),
+                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                          Container(
-                            width: 100,
-                            margin: EdgeInsets.only(top: size.height / 5),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                buildProfile(
-                                  data.profilePhoto,
-                                ),
-                                Column(
-                                  children: [
-                                    InkWell(
-                                      onTap: () =>
-                                          videoController.likeVideo(data.id),
-                                      child: Icon(
-                                        Icons.favorite,
-                                        size: 40,
-                                        color: data.likes.contains(
-                                                authController.user.uid)
-                                            ? Colors.red
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 7),
-                                    Text(
-                                      data.likes.length.toString(),
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                                Column(
-                                  children: [
-                                    InkWell(
-                                      onTap: () => Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => CommentScreen(
-                                            id: data.id,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.comment,
-                                        size: 40,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 7),
-                                    Text(
-                                      data.commentCount.toString(),
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                                Column(
-                                  children: [
-                                    InkWell(
-                                      onTap: () {},
-                                      child: const Icon(
-                                        Icons.reply,
-                                        size: 40,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 7),
-                                    Text(
-                                      data.shareCount.toString(),
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                                CircleAnimation(
-                                  child: buildMusicAlbum(data.profilePhoto),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         );
       }),
     );

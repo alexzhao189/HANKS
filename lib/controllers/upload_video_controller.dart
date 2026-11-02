@@ -5,6 +5,7 @@ import 'package:tiktok_tutorial/l10n/l10n_helper.dart';
 import 'package:tiktok_tutorial/models/video.dart';
 import 'package:tiktok_tutorial/services/local_db.dart';
 import 'package:tiktok_tutorial/services/local_media.dart';
+import 'package:tiktok_tutorial/controllers/home_nav_controller.dart';
 import 'package:tiktok_tutorial/controllers/video_controller.dart';
 import 'package:video_compress/video_compress.dart';
 
@@ -67,11 +68,17 @@ class UploadVideoController extends GetxController {
 
       await LocalDb.instance.insertVideo(video);
 
-      if (Get.isRegistered<VideoController>()) {
-        await Get.find<VideoController>().refreshVideos();
-      }
+      final videoController = Get.isRegistered<VideoController>()
+          ? Get.find<VideoController>()
+          : Get.put(VideoController());
+      await videoController.refreshVideos();
 
-      Get.back();
+      // Pop ConfirmScreen + options dialog (if still open) back to HomeShell.
+      Get.until((route) => route.isFirst);
+
+      if (Get.isRegistered<HomeNavController>()) {
+        Get.find<HomeNavController>().goHomeAndRefresh();
+      }
     } catch (e) {
       final l10n = tryL10n();
       Get.snackbar(
